@@ -16,7 +16,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class SyncTrainingsCommand extends Command
 {
     public function __construct(
-        private GoogleSheetService $googleSheetService
+        private GoogleSheetService $googleSheetService,
     ) {
         parent::__construct();
     }
@@ -30,9 +30,11 @@ class SyncTrainingsCommand extends Command
         try {
             $this->googleSheetService->syncTrainings();
             $io->success('Trainings synchronized successfully');
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $io->error('Error synchronizing trainings: ' . $e->getMessage());
+            $io->error('Error synchronizing trainings: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

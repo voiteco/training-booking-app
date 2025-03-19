@@ -16,7 +16,7 @@ class DeviceTokenService
 
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private UserSessionRepository $userSessionRepository
+        private UserSessionRepository $userSessionRepository,
     ) {
     }
 

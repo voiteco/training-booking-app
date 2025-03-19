@@ -2,11 +2,11 @@
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\Training;
 use App\Entity\Booking;
+use App\Entity\Training;
+use Doctrine\ORM\EntityManagerInterface;
 use Random\RandomException;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Doctrine\ORM\EntityManagerInterface;
 
 class BookingControllerTest extends WebTestCase
 {
@@ -61,7 +61,7 @@ class BookingControllerTest extends WebTestCase
             'training_id' => $this->trainingId,
             'full_name' => 'Иван Иванов',
             'email' => 'ivan@example.com',
-            'phone' => '+79001234567'
+            'phone' => '+79001234567',
         ];
 
         $this->client->request(
@@ -116,7 +116,7 @@ class BookingControllerTest extends WebTestCase
         // Теперь отменяем бронирование
         $this->client->request(
             'DELETE',
-            '/api/bookings/' . $booking->getId(),
+            '/api/bookings/'.$booking->getId(),
             [],
             [],
             ['HTTP_X-Device-Token' => $this->deviceToken]
@@ -142,12 +142,12 @@ class BookingControllerTest extends WebTestCase
         // Создаем два бронирования с одним device token
         $training = $this->entityManager->getRepository(Training::class)->find($this->trainingId);
 
-        for ($i = 0; $i < 2; $i++) {
+        for ($i = 0; $i < 2; ++$i) {
             $booking = new Booking();
             $booking->setTraining($training);
-            $booking->setFullName('Тест Тестов ' . $i);
-            $booking->setEmail('test' . $i . '@example.com');
-            $booking->setPhone('+7900123456' . $i);
+            $booking->setFullName('Тест Тестов '.$i);
+            $booking->setEmail('test'.$i.'@example.com');
+            $booking->setPhone('+7900123456'.$i);
             $booking->setStatus('active');
             $booking->setConfirmationToken(bin2hex(random_bytes(16)));
             $booking->setDeviceToken($this->deviceToken);
@@ -193,7 +193,7 @@ class BookingControllerTest extends WebTestCase
             'training_id' => $this->trainingId,
             'full_name' => 'Иван Иванов',
             'email' => 'ivan@example.com',
-            'phone' => '+79001234567'
+            'phone' => '+79001234567',
         ];
 
         $this->client->request(

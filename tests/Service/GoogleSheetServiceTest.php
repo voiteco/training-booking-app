@@ -46,16 +46,17 @@ class GoogleSheetServiceTest extends TestCase
     {
         $expectedTrainings = [
             $this->createTraining('1', 'Йога', '2025-03-25'),
-            $this->createTraining('2', 'Пилатес', '2025-03-26')
+            $this->createTraining('2', 'Пилатес', '2025-03-26'),
         ];
 
         $this->cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(function ($key, $callback) use ($expectedTrainings) {
+            ->willReturnCallback(function ($key, $callback) {
                 $item = $this->createMock(ItemInterface::class);
                 $item->expects($this->once())
                     ->method('expiresAfter')
                     ->with(3600);
+
                 return $callback($item);
             });
 
@@ -79,7 +80,7 @@ class GoogleSheetServiceTest extends TestCase
                 'time' => '10:00',
                 'title' => 'Йога',
                 'slots' => 20,
-                'price' => 1000
+                'price' => 1000,
             ],
             [
                 'id' => '2',
@@ -87,8 +88,8 @@ class GoogleSheetServiceTest extends TestCase
                 'time' => '11:00',
                 'title' => 'Пилатес',
                 'slots' => 15,
-                'price' => 1200
-            ]
+                'price' => 1200,
+            ],
         ];
 
         $existingTraining = $this->createTraining('1', 'Йога (старое название)', '2025-03-25');

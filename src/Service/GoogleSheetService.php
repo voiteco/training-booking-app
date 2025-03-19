@@ -3,13 +3,13 @@
 namespace App\Service;
 
 use App\Entity\Training;
-use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\TrainingRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Google\Client;
+use Google\Service\Sheets;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
-use Google\Client;
-use Google\Service\Sheets;
 
 class GoogleSheetService
 {
@@ -25,7 +25,7 @@ class GoogleSheetService
         private CacheInterface $cache,
         private LoggerInterface $logger,
         private string $googleSheetId,
-        private string $googleApiKey
+        private string $googleApiKey,
     ) {
     }
 
@@ -35,6 +35,7 @@ class GoogleSheetService
             $data = $this->fetchDataFromGoogleSheet();
             if (empty($data)) {
                 $this->logger->warning('No data retrieved from Google Sheet');
+
                 return;
             }
 
@@ -44,9 +45,9 @@ class GoogleSheetService
             $this->cache->delete(self::CACHE_KEY);
             $this->logger->info('Trainings synchronized successfully from Google Sheet');
         } catch (\Exception $e) {
-            $this->logger->error('Error syncing trainings from Google Sheet: ' . $e->getMessage(), [
+            $this->logger->error('Error syncing trainings from Google Sheet: '.$e->getMessage(), [
                 'exception' => $e,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
         }
@@ -56,6 +57,7 @@ class GoogleSheetService
     {
         return $this->cache->get(self::CACHE_KEY, function (ItemInterface $item) {
             $item->expiresAfter(self::CACHE_TTL);
+
             return $this->trainingRepository->findUpcoming();
         });
     }
@@ -92,8 +94,8 @@ class GoogleSheetService
                 'date' => $this->formatDate($row[1]),
                 'time' => $this->formatTime($row[2]),
                 'title' => $row[3],
-                'slots' => (int)$row[4],
-                'price' => (float)$row[5]
+                'slots' => (int) $row[4],
+                'price' => (float) $row[5],
             ];
         }
 
@@ -118,8 +120,9 @@ class GoogleSheetService
         } catch (\Exception $e) {
             $this->logger->warning('Error formatting date', [
                 'date' => $dateString,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return $dateString; // Возвращаем исходную строку, если не удалось преобразовать
         }
     }
@@ -142,9 +145,10 @@ class GoogleSheetService
         } catch (\Exception $e) {
             $this->logger->warning('Error formatting time', [
                 'time' => $timeString,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            return $timeString . ':00'; // Добавляем секунды, если не удалось преобразовать
+
+            return $timeString.':00'; // Добавляем секунды, если не удалось преобразовать
         }
     }
 
@@ -170,9 +174,9 @@ class GoogleSheetService
                 $training = new Training();
                 $training->setGoogleSheetId($googleSheetId);
                 $training->setSlotsAvailable($row['slots']); // Изначально все места свободны
-                $newTrainings++;
+                ++$newTrainings;
             } else {
-                $updatedTrainings++;
+                ++$updatedTrainings;
             }
 
             $training->setDate(new \DateTime($row['date']));
@@ -188,7 +192,7 @@ class GoogleSheetService
 
         $this->logger->info('Trainings update completed', [
             'new_trainings' => $newTrainings,
-            'updated_trainings' => $updatedTrainings
+            'updated_trainings' => $updatedTrainings,
         ]);
     }
 

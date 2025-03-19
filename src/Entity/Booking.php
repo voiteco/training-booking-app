@@ -22,34 +22,34 @@ class Booking
 
     #[ORM\ManyToOne(inversedBy: 'bookings')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Assert\NotNull(message: "Training cannot be null")]
+    #[Assert\NotNull(message: 'Training cannot be null')]
     #[Groups(['booking:read'])]
     private ?Training $training = null;
 
     #[ORM\Column(length: 255)]
-    #[Assert\NotBlank(message: "Full name cannot be empty")]
+    #[Assert\NotBlank(message: 'Full name cannot be empty')]
     #[Assert\Length(
         min: 2,
         max: 255,
-        minMessage: "Full name must be at least {{ limit }} characters",
-        maxMessage: "Full name cannot be longer than {{ limit }} characters"
+        minMessage: 'Full name must be at least {{ limit }} characters',
+        maxMessage: 'Full name cannot be longer than {{ limit }} characters'
     )]
     #[Groups(['booking:read'])]
     private ?string $fullName = null;
 
     #[ORM\Column(length: 255)]
-    #[Assert\NotBlank(message: "Email cannot be empty")]
+    #[Assert\NotBlank(message: 'Email cannot be empty')]
     #[Assert\Email(message: "The email '{{ value }}' is not a valid email")]
     #[Groups(['booking:read'])]
     private ?string $email = null;
 
     #[ORM\Column(length: 50)]
-    #[Assert\NotBlank(message: "Phone number cannot be empty")]
+    #[Assert\NotBlank(message: 'Phone number cannot be empty')]
     #[Assert\Length(
         min: 5,
         max: 50,
-        minMessage: "Phone number must be at least {{ limit }} characters",
-        maxMessage: "Phone number cannot be longer than {{ limit }} characters"
+        minMessage: 'Phone number must be at least {{ limit }} characters',
+        maxMessage: 'Phone number cannot be longer than {{ limit }} characters'
     )]
     #[Groups(['booking:read'])]
     private ?string $phone = null;
@@ -57,7 +57,7 @@ class Booking
     #[ORM\Column(length: 20)]
     #[Assert\Choice(
         choices: [self::STATUS_ACTIVE, self::STATUS_CANCELLED],
-        message: "Status must be one of: active, cancelled"
+        message: 'Status must be one of: active, cancelled'
     )]
     #[Groups(['booking:read'])]
     private ?string $status = self::STATUS_ACTIVE;
@@ -66,7 +66,7 @@ class Booking
     private ?string $confirmationToken = null;
 
     #[ORM\Column(length: 255)]
-    #[Assert\NotBlank(message: "Device token cannot be empty")]
+    #[Assert\NotBlank(message: 'Device token cannot be empty')]
     #[Groups(['booking:read'])]
     private ?string $deviceToken = null;
 

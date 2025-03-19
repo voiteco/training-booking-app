@@ -20,8 +20,9 @@ class UserDataController extends AbstractController
         private EntityManagerInterface $entityManager,
         private UserSessionRepository $userSessionRepository,
         private DeviceTokenService $deviceTokenService,
-        private ValidatorInterface $validator
-    ) {}
+        private ValidatorInterface $validator,
+    ) {
+    }
 
     /**
      * @throws \JsonException
@@ -59,6 +60,7 @@ class UserDataController extends AbstractController
             foreach ($errors as $error) {
                 $errorMessages[] = $error->getMessage();
             }
+
             return $this->json(['message' => 'Validation failed', 'errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
         }
 
@@ -69,7 +71,7 @@ class UserDataController extends AbstractController
         return $this->json([
             'success' => true,
             'message' => 'User data saved successfully',
-            'device_token' => $deviceToken
+            'device_token' => $deviceToken,
         ]);
     }
 
@@ -82,7 +84,7 @@ class UserDataController extends AbstractController
         if ($userSession === null) {
             return $this->json([
                 'message' => 'No user data found',
-                'data' => null
+                'data' => null,
             ]);
         }
 
@@ -92,7 +94,7 @@ class UserDataController extends AbstractController
                 'full_name' => $userSession->getFullName(),
                 'email' => $userSession->getEmail(),
                 'phone' => $userSession->getPhone(),
-            ]
+            ],
         ]);
     }
 }

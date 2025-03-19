@@ -3,8 +3,8 @@
 namespace App\Tests\Controller\Api;
 
 use App\Entity\UserSession;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class UserDataControllerTest extends WebTestCase
 {
@@ -29,7 +29,7 @@ class UserDataControllerTest extends WebTestCase
         $userData = [
             'full_name' => 'Мария Сидорова',
             'email' => 'maria@example.com',
-            'phone' => '+79001112233'
+            'phone' => '+79001112233',
         ];
 
         $this->client->request(
@@ -39,7 +39,7 @@ class UserDataControllerTest extends WebTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_X-Device-Token' => 'test-user-device'
+                'HTTP_X-Device-Token' => 'test-user-device',
             ],
             json_encode($userData, JSON_THROW_ON_ERROR)
         );
@@ -79,7 +79,7 @@ class UserDataControllerTest extends WebTestCase
         $updatedData = [
             'full_name' => 'Новое Имя',
             'email' => 'new@example.com',
-            'phone' => '+79001113344'
+            'phone' => '+79001113344',
         ];
 
         $this->client->request(
@@ -89,7 +89,7 @@ class UserDataControllerTest extends WebTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_X-Device-Token' => 'existing-user-device'
+                'HTTP_X-Device-Token' => 'existing-user-device',
             ],
             json_encode($updatedData)
         );
@@ -166,7 +166,7 @@ class UserDataControllerTest extends WebTestCase
         $invalidData = [
             'full_name' => 'Тест Тестов',
             'email' => 'invalid-email',
-            'phone' => '+79001234567'
+            'phone' => '+79001234567',
         ];
 
         $this->client->request(
@@ -176,7 +176,7 @@ class UserDataControllerTest extends WebTestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_X-Device-Token' => 'test-device'
+                'HTTP_X-Device-Token' => 'test-device',
             ],
             json_encode($invalidData, JSON_THROW_ON_ERROR)
         );

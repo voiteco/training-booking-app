@@ -13,7 +13,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/bookings')]
@@ -25,7 +24,7 @@ class BookingController extends AbstractController
         private BookingRepository $bookingRepository,
         private DeviceTokenService $deviceTokenService,
         private SerializerInterface $serializer,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
     ) {
     }
 
@@ -38,9 +37,9 @@ class BookingController extends AbstractController
         $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
         // Validate the agreement separately since it's not part of the entity
-        //if (!isset($data['agreement']) || $data['agreement'] !== true) {
+        // if (!isset($data['agreement']) || $data['agreement'] !== true) {
         //    return $this->json(['errors' => ['agreement' => 'You must agree to the terms']], Response::HTTP_BAD_REQUEST);
-        //}
+        // }
 
         $training = $this->trainingRepository->find($data['training_id'] ?? 0);
 
@@ -82,6 +81,7 @@ class BookingController extends AbstractController
                 $propertyPath = $violation->getPropertyPath();
                 $errors[$propertyPath] = $violation->getMessage();
             }
+
             return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
         }
 
@@ -100,7 +100,7 @@ class BookingController extends AbstractController
         $this->entityManager->flush();
 
         $responseData = json_decode($this->serializer->serialize($booking, 'json', [
-            'groups' => ['booking:read']
+            'groups' => ['booking:read'],
         ]), true, 512, JSON_THROW_ON_ERROR);
 
         $response = new JsonResponse($responseData, Response::HTTP_CREATED);
@@ -154,7 +154,7 @@ class BookingController extends AbstractController
         $result = [];
         foreach ($bookings as $booking) {
             $bookingData = json_decode($this->serializer->serialize($booking, 'json', [
-                'groups' => ['booking:read']
+                'groups' => ['booking:read'],
             ]), true, 512, JSON_THROW_ON_ERROR);
 
             // Добавляем информацию о тренировке

@@ -7,9 +7,9 @@ use App\Repository\UserSessionRepository;
 use App\Service\DeviceTokenService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\ParameterBag;
 
 class DeviceTokenServiceTest extends KernelTestCase
 {
@@ -86,7 +86,7 @@ class DeviceTokenServiceTest extends KernelTestCase
         $userData = [
             'fullName' => 'Test User',
             'email' => 'test@example.com',
-            'phone' => '+12345678901'
+            'phone' => '+12345678901',
         ];
 
         $this->deviceTokenService->updateUserSessionData($session, $userData);

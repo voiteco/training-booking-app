@@ -20,7 +20,7 @@ class TrainingController extends AbstractController
         private TrainingRepository $trainingRepository,
         private BookingRepository $bookingRepository,
         private DeviceTokenService $deviceTokenService,
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
     ) {
     }
 
@@ -126,7 +126,7 @@ class TrainingController extends AbstractController
     private function serializeTraining(Training $training): array
     {
         $data = json_decode($this->serializer->serialize($training, 'json', [
-            'groups' => ['training:read']
+            'groups' => ['training:read'],
         ]), true, 512, JSON_THROW_ON_ERROR);
 
         // Форматируем дату и время

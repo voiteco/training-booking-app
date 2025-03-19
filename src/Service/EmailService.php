@@ -12,8 +12,9 @@ class EmailService
     public function __construct(
         private MailerInterface $mailer,
         private UrlGeneratorInterface $urlGenerator,
-        private string $mailFrom
-    ) {}
+        private string $mailFrom,
+    ) {
+    }
 
     public function sendBookingConfirmation(Booking $booking): void
     {

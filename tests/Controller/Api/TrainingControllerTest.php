@@ -2,11 +2,11 @@
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\Training;
 use App\Entity\Booking;
+use App\Entity\Training;
 use App\Entity\UserSession;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class TrainingControllerTest extends WebTestCase
 {
@@ -41,7 +41,7 @@ class TrainingControllerTest extends WebTestCase
         $trainings = [
             $this->createTraining('1', '2025-03-25', '10:00', 'Йога для начинающих', 20, 0),
             $this->createTraining('2', '2025-03-25', '12:00', 'Пилатес', 15, 15, 1200), // No slots available
-            $this->createTraining('3', '2025-03-26', '11:00', 'Кроссфит', 10, 1500)
+            $this->createTraining('3', '2025-03-26', '11:00', 'Кроссфит', 10, 1500),
         ];
 
         foreach ($trainings as $training) {
@@ -139,7 +139,7 @@ class TrainingControllerTest extends WebTestCase
 
         // Should only return trainings with available slots
         $this->assertCount(2, $response);
-        $titles = array_map(function($item) { return $item['title']; }, $response);
+        $titles = array_map(function ($item) { return $item['title']; }, $response);
         $this->assertContains('Пилатес', $titles);
         $this->assertContains('Кроссфит', $titles);
         $this->assertNotContains('Йога для начинающих', $titles); // This should be filtered out
@@ -173,7 +173,7 @@ class TrainingControllerTest extends WebTestCase
 
         $this->client->request(
             'GET',
-            '/api/trainings/' . $id,
+            '/api/trainings/'.$id,
             [],
             [],
             ['HTTP_X-Device-Token' => $this->deviceToken]
@@ -205,7 +205,7 @@ class TrainingControllerTest extends WebTestCase
 
         $this->client->request(
             'GET',
-            '/api/trainings/' . $id,
+            '/api/trainings/'.$id,
             [],
             [],
             ['HTTP_X-Device-Token' => $this->deviceToken]

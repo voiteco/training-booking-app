@@ -17,15 +17,15 @@ class UserSession
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Assert\NotBlank(message: "Device token cannot be empty")]
+    #[Assert\NotBlank(message: 'Device token cannot be empty')]
     private ?string $deviceToken = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Length(
         min: 2,
         max: 255,
-        minMessage: "Full name must be at least {{ limit }} characters long",
-        maxMessage: "Full name cannot be longer than {{ limit }} characters"
+        minMessage: 'Full name must be at least {{ limit }} characters long',
+        maxMessage: 'Full name cannot be longer than {{ limit }} characters'
     )]
     private ?string $fullName = null;
 
@@ -38,16 +38,16 @@ class UserSession
     #[ORM\Column(length: 50, nullable: true)]
     #[Assert\Regex(
         pattern: "/^\+?[0-9\s-]{7,15}$/",
-        message: "Phone number must be valid (7-15 digits, may include +, spaces or hyphens)"
+        message: 'Phone number must be valid (7-15 digits, may include +, spaces or hyphens)'
     )]
     private ?string $phone = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    #[Assert\NotNull(message: "Last visit date is required")]
+    #[Assert\NotNull(message: 'Last visit date is required')]
     private ?\DateTimeInterface $lastVisit = null;
 
     #[ORM\Column]
-    #[Assert\NotNull(message: "Created date is required")]
+    #[Assert\NotNull(message: 'Created date is required')]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]

@@ -5,7 +5,6 @@ namespace App\Tests\Service;
 use App\Entity\Booking;
 use App\Entity\Training;
 use App\Service\EmailService;
-use Google\Service\Dfareporting\Ad;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
@@ -65,6 +64,7 @@ class EmailServiceTest extends KernelTestCase
                 $this->assertStringContainsString('10:00', $email->getHtmlBody());
                 $this->assertStringContainsString('John Doe', $email->getHtmlBody());
                 $this->assertStringContainsString('token123', $email->getHtmlBody());
+
                 return true;
             }));
 
@@ -95,6 +95,7 @@ class EmailServiceTest extends KernelTestCase
                 $this->assertStringContainsString('22.03.2025', $email->getHtmlBody());
                 $this->assertStringContainsString('15:00', $email->getHtmlBody());
                 $this->assertStringContainsString('Jane Doe', $email->getHtmlBody());
+
                 return true;
             }));
 
