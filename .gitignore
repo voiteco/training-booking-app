@@ -1,6 +1,12 @@
 # IDE configurations
 /.idea/
 
+# PHP CS Fixer
+/.php-cs-fixer.cache
+
+# PHPStan
+/phpstan.phar
+
 ###> symfony/framework-bundle ###
 /.env.local
 /.env.local.php
@@ -27,3 +33,12 @@ yarn-error.log
 /phpunit.xml
 .phpunit.result.cache
 ###< phpunit/phpunit ###
+
+###> friendsofphp/php-cs-fixer ###
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+###< friendsofphp/php-cs-fixer ###
+
+###> phpstan/phpstan ###
+phpstan.neon
+###< phpstan/phpstan ###
