@@ -1,0 +1,94 @@
+### Training Controller Endpoints
+
+### Get all upcoming trainings
+GET http://localhost:8080/api/trainings
+Accept: application/json
+X-Device-Token: test-device-token
+
+### Get trainings with available slots
+GET http://localhost:8080/api/trainings/available
+Accept: application/json
+X-Device-Token: test-device-token
+
+### Get user's booked trainings
+GET http://localhost:8080/api/trainings/user
+Accept: application/json
+X-Device-Token: test-device-token
+
+### Get specific training by ID
+GET http://localhost:8080/api/trainings/1
+Accept: application/json
+X-Device-Token: test-device-token
+
+### Booking Controller Endpoints
+
+### Create a booking
+POST http://localhost:8080/api/bookings
+Content-Type: application/json
+Accept: application/json
+X-Device-Token: test-device-token
+
+{
+  "trainingId": 1,
+  "fullName": "John Doe",
+  "email": "john.doe@example.com",
+  "phone": "+79001234567",
+  "agreement": true
+}
+
+### Cancel a booking
+DELETE http://localhost:8080/api/bookings/1
+Accept: application/json
+X-Device-Token: test-device-token
+
+### Get booking history
+GET http://localhost:8080/api/bookings/history
+Accept: application/json
+X-Device-Token: test-device-token
+
+### User Data Controller Endpoints
+
+### Save user data
+POST http://localhost:8080/api/user-data
+Content-Type: application/json
+Accept: application/json
+X-Device-Token: test-device-token
+
+{
+  "full_name": "John Doe",
+  "email": "john.doe@example.com",
+  "phone": "+79001234567"
+}
+
+### Get user data
+GET http://localhost:8080/api/user-data
+Accept: application/json
+X-Device-Token: test-device-token
+
+### Error Cases
+
+### Create booking with invalid data
+POST http://localhost:8080/api/bookings
+Content-Type: application/json
+Accept: application/json
+X-Device-Token: test-device-token
+
+{
+  "trainingId": 1,
+  "fullName": "",
+  "email": "invalid-email",
+  "phone": "+7900",
+  "agreement": false
+}
+
+### Save invalid user data
+POST http://localhost:8080/api/user-data
+Content-Type: application/json
+Accept: application/json
+X-Device-Token: test-device-token
+
+{
+  "full_name": "Test User",
+  "email": "invalid-email",
+  "phone": ""
+}

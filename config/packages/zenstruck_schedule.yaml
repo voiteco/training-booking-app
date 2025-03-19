@@ -1,0 +1,8 @@
+# config/packages/zenstruck_schedule.yaml
+zenstruck_schedule:
+    tasks:
+        sync_trainings:
+            task: 'app:sync-trainings'           # Команда для синхронизации
+            frequency: '0 */3 * * *'             # Запускать каждые 3 часа
+            without_overlapping: true            # Предотвращать перекрытие запусков
+            description: 'Sync trainings from Google Sheets'
