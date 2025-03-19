@@ -40,7 +40,7 @@ class TrainingControllerTest extends WebTestCase
         // Create test trainings
         $trainings = [
             $this->createTraining('1', '2025-03-25', '10:00', 'Йога для начинающих', 20, 0),
-            $this->createTraining('2', '2025-03-25', '12:00', 'Пилатес', 15, 15, 1200), // No slots available
+            $this->createTraining('2', '2025-03-25', '12:00', 'Пилатес', 15, 15, '1200'), // No slots available
             $this->createTraining('3', '2025-03-26', '11:00', 'Кроссфит', 10, 1500),
         ];
 
@@ -78,7 +78,7 @@ class TrainingControllerTest extends WebTestCase
     /**
      * @throws \DateMalformedStringException
      */
-    private function createTraining(string $googleSheetId, string $date, string $time, string $title, int $slots, ?int $slotsAvailable = 0, float $price = 1000): Training
+    private function createTraining(string $googleSheetId, string $date, string $time, string $title, int $slots, ?int $slotsAvailable = 0, string $price = '1000'): Training
     {
         $training = new Training();
         $training->setGoogleSheetId($googleSheetId);

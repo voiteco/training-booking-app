@@ -42,6 +42,9 @@ class GoogleSheetServiceTest extends TestCase
         $this->updateTrainingsMethod = $reflectionClass->getMethod('updateTrainingsFromData');
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     */
     public function testGetCachedTrainings(): void
     {
         $expectedTrainings = [
@@ -80,7 +83,7 @@ class GoogleSheetServiceTest extends TestCase
                 'time' => '10:00',
                 'title' => 'Йога',
                 'slots' => 20,
-                'price' => 1000,
+                'price' => '1000',
             ],
             [
                 'id' => '2',
@@ -88,7 +91,7 @@ class GoogleSheetServiceTest extends TestCase
                 'time' => '11:00',
                 'title' => 'Пилатес',
                 'slots' => 15,
-                'price' => 1200,
+                'price' => '1200',
             ],
         ];
 
@@ -111,9 +114,12 @@ class GoogleSheetServiceTest extends TestCase
         // Verify data was updated
         $this->assertEquals('Йога', $existingTraining->getTitle());
         $this->assertEquals(20, $existingTraining->getSlots());
-        $this->assertEquals(1000, $existingTraining->getPrice());
+        $this->assertEquals('1000', $existingTraining->getPrice());
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     */
     private function createTraining($googleSheetId, $title, $date): Training
     {
         $training = new Training();
@@ -123,7 +129,7 @@ class GoogleSheetServiceTest extends TestCase
         $training->setTime(new \DateTimeImmutable('10:00'));
         $training->setSlots(10);
         $training->setSlotsAvailable(10);
-        $training->setPrice(1000);
+        $training->setPrice('1000');
 
         return $training;
     }

@@ -5,6 +5,7 @@ namespace App\Tests\Service;
 use App\Entity\Booking;
 use App\Entity\Training;
 use App\Service\EmailService;
+use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
@@ -13,9 +14,9 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class EmailServiceTest extends KernelTestCase
 {
-    private ?MailerInterface $mailer;
-    private ?UrlGeneratorInterface $urlGenerator;
-    private ?EmailService $emailService;
+    private MailerInterface&MockObject $mailer;
+    private UrlGeneratorInterface&MockObject $urlGenerator;
+    private EmailService $emailService;
 
     protected function setUp(): void
     {

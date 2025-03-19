@@ -3,14 +3,12 @@
 namespace App\Tests\Repository;
 
 use App\Entity\Training;
-use App\Repository\TrainingRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 class TrainingRepositoryTest extends KernelTestCase
 {
-    private ?EntityManagerInterface $entityManager;
-    private ?TrainingRepository $repository;
+    private $entityManager;
+    private $repository;
 
     protected function setUp(): void
     {
@@ -34,7 +32,7 @@ class TrainingRepositoryTest extends KernelTestCase
         $training1->setTime(new \DateTime('10:00:00'));
         $training1->setSlots(10);
         $training1->setSlotsAvailable(5);
-        $training1->setPrice(15.00);
+        $training1->setPrice('15.00');
         $training1->setGoogleSheetId('sheet1');
 
         $training2 = new Training();
@@ -43,7 +41,7 @@ class TrainingRepositoryTest extends KernelTestCase
         $training2->setTime(new \DateTime('11:00:00'));
         $training2->setSlots(10);
         $training2->setSlotsAvailable(0); // No available slots
-        $training2->setPrice(20.00);
+        $training2->setPrice('20.00');
         $training2->setGoogleSheetId('sheet2');
 
         $training3 = new Training();
@@ -52,7 +50,7 @@ class TrainingRepositoryTest extends KernelTestCase
         $training3->setTime(new \DateTime('12:00:00'));
         $training3->setSlots(10);
         $training3->setSlotsAvailable(5); // Available slots
-        $training3->setPrice(25.00);
+        $training3->setPrice('25.00');
         $training3->setGoogleSheetId('sheet3');
 
         // Save trainings to the database

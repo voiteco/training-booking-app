@@ -6,30 +6,29 @@ use App\Entity\UserSession;
 use App\Repository\UserSessionRepository;
 use App\Service\DeviceTokenService;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\HttpFoundation\ParameterBag;
+use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class DeviceTokenServiceTest extends KernelTestCase
 {
-    private EntityManagerInterface $entityManager;
-    private UserSessionRepository $repository;
+    private UserSessionRepository&MockObject $repository;
     private DeviceTokenService $deviceTokenService;
 
     protected function setUp(): void
     {
-        $kernel = self::bootKernel();
-        $this->entityManager = $kernel->getContainer()->get('doctrine')->getManager();
+        $entityManager = $this->createMock(EntityManagerInterface::class);
         $this->repository = $this->createMock(UserSessionRepository::class);
-        $this->deviceTokenService = new DeviceTokenService($this->entityManager, $this->repository);
+        $this->deviceTokenService = new DeviceTokenService($entityManager, $this->repository);
     }
 
     public function testGetDeviceTokenFromCookie(): void
     {
         // Create a request with a cookie
         $request = new Request();
-        $request->cookies = new ParameterBag(['device_token' => 'test-device-token']);
+        $request->cookies = new InputBag(['device_token' => 'test-device-token']);
 
         $token = $this->deviceTokenService->getDeviceToken($request);
         $this->assertEquals('test-device-token', $token);
@@ -62,7 +61,7 @@ class DeviceTokenServiceTest extends KernelTestCase
     {
         $token = 'test-device-token';
         $request = new Request();
-        $request->cookies = new ParameterBag(['device_token' => $token]);
+        $request->cookies = new InputBag(['device_token' => $token]);
 
         $session = new UserSession();
         $session->setDeviceToken($token);

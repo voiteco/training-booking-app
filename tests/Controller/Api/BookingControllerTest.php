@@ -40,7 +40,7 @@ class BookingControllerTest extends WebTestCase
         $training->setTitle('Тестовая тренировка');
         $training->setSlots(10);
         $training->setSlotsAvailable(10);
-        $training->setPrice(1000);
+        $training->setPrice('1000');
         $training->setCreatedAt(new \DateTimeImmutable());
         $training->setUpdatedAt(new \DateTimeImmutable());
 

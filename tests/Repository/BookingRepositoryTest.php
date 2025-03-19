@@ -4,14 +4,12 @@ namespace App\Tests\Repository;
 
 use App\Entity\Booking;
 use App\Entity\Training;
-use App\Repository\BookingRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 class BookingRepositoryTest extends KernelTestCase
 {
-    private ?EntityManagerInterface $entityManager;
-    private ?BookingRepository $repository;
+    private $entityManager;
+    private $repository;
 
     protected function setUp(): void
     {
@@ -31,7 +29,7 @@ class BookingRepositoryTest extends KernelTestCase
         $training->setTime(new \DateTime('15:00:00'));
         $training->setSlots(10);
         $training->setSlotsAvailable(5);
-        $training->setPrice(20.00);
+        $training->setPrice('20.00');
         $training->setGoogleSheetId('sheet-test');
 
         $this->entityManager->persist($training);
