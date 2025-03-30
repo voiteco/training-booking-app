@@ -6,16 +6,18 @@ use App\Entity\Training;
 use App\Repository\TrainingRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Google\Client;
+use Google\Service\Exception;
 use Google\Service\Sheets;
+use Psr\Cache\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
 class GoogleSheetService
 {
-    private const CACHE_KEY = 'google_sheet_trainings';
-    private const CACHE_TTL = 3600; // 1 hour
-    private const SHEET_RANGE = 'Trainings!A2:F'; // Начиная со второй строки (после заголовков)
+    private const string CACHE_KEY = 'google_sheet_trainings';
+    private const int CACHE_TTL = 3600; // 1 hour
+    private const string SHEET_RANGE = 'Trainings!A2:G'; // Начиная со второй строки (после заголовков)
 
     private ?Sheets $sheetsService = null;
 
@@ -29,6 +31,10 @@ class GoogleSheetService
     ) {
     }
 
+    /**
+     * @throws Exception
+     * @throws InvalidArgumentException
+     */
     public function syncTrainings(): void
     {
         try {
@@ -62,6 +68,9 @@ class GoogleSheetService
         });
     }
 
+    /**
+     * @throws Exception
+     */
     private function fetchDataFromGoogleSheet(): array
     {
         $sheetsService = $this->getSheetsService();
@@ -82,7 +91,7 @@ class GoogleSheetService
         $formattedData = [];
         foreach ($values as $row) {
             // Проверяем, что в строке достаточно данных
-            if (count($row) < 6) {
+            if (count($row) < 7) {
                 $this->logger->warning('Skipping incomplete row in Google Sheet', ['row' => $row]);
                 continue;
             }
@@ -92,10 +101,11 @@ class GoogleSheetService
             $formattedData[] = [
                 'id' => $row[0],
                 'date' => $this->formatDate($row[1]),
-                'time' => $this->formatTime($row[2]),
-                'title' => $row[3],
-                'slots' => (int) $row[4],
-                'price' => (float) $row[5],
+                'dayOfWeek' => $row[2],
+                'time' => $this->formatTime($row[3]),
+                'title' => $row[4],
+                'slots' => (int) $row[5],
+                'price' => (float) $row[6],
             ];
         }
 
@@ -106,7 +116,7 @@ class GoogleSheetService
     {
         // Преобразуем дату из формата, используемого в Google Sheet, в формат Y-m-d
         try {
-            $date = \DateTime::createFromFormat('d.m.Y', $dateString);
+            $date = \DateTime::createFromFormat('d.m.y', $dateString);
             if (!$date) {
                 // Пробуем другой формат
                 $date = \DateTime::createFromFormat('Y-m-d', $dateString);

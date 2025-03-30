@@ -11,8 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DeviceTokenService
 {
-    private const COOKIE_NAME = 'device_token';
-    private const COOKIE_LIFETIME = 31536000; // 1 год
+    private const string COOKIE_NAME = 'device_token';
+    private const int COOKIE_LIFETIME = 31536000; // 1 год
 
     public function __construct(
         private EntityManagerInterface $entityManager,

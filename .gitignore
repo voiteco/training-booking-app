@@ -42,3 +42,5 @@ yarn-error.log
 ###> phpstan/phpstan ###
 phpstan.neon
 ###< phpstan/phpstan ###
+
+context.txt
