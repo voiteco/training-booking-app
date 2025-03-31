@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Дополнительные глобальные стили */
+body {
+    @apply bg-gray-50 text-gray-900;
+}
+
+.btn {
+    @apply px-4 py-2 rounded-md transition-colors;
+}
+
+.btn-primary {
+    @apply bg-primary text-white hover:bg-primary/90;
+}
+
+.btn-secondary {
+    @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+}
+
+.input {
+    @apply border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none;
+}
