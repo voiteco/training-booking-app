@@ -6,13 +6,13 @@ use App\Entity\UserSession;
 use App\Repository\UserSessionRepository;
 use App\Service\DeviceTokenService;
 use Doctrine\ORM\EntityManagerInterface;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: 'User Data')]
 #[Route('/api/user-data')]
@@ -46,7 +46,7 @@ class UserDataController extends AbstractController
             properties: [
                 new OA\Property(property: 'full_name', type: 'string', example: 'John Doe'),
                 new OA\Property(property: 'email', type: 'string', format: 'email', example: 'john@example.com'),
-                new OA\Property(property: 'phone', type: 'string', example: '+1234567890')
+                new OA\Property(property: 'phone', type: 'string', example: '+1234567890'),
             ]
         )
     )]
@@ -57,7 +57,7 @@ class UserDataController extends AbstractController
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
                 new OA\Property(property: 'message', type: 'string', example: 'User data saved successfully'),
-                new OA\Property(property: 'device_token', type: 'string', example: 'abc123def456')
+                new OA\Property(property: 'device_token', type: 'string', example: 'abc123def456'),
             ]
         )
     )]
@@ -71,7 +71,7 @@ class UserDataController extends AbstractController
                     property: 'errors',
                     type: 'array',
                     items: new OA\Items(type: 'string', example: 'Email is not valid')
-                )
+                ),
             ]
         )
     )]
@@ -145,11 +145,11 @@ class UserDataController extends AbstractController
                     properties: [
                         new OA\Property(property: 'full_name', type: 'string', example: 'John Doe'),
                         new OA\Property(property: 'email', type: 'string', example: 'john@example.com'),
-                        new OA\Property(property: 'phone', type: 'string', example: '+1234567890')
+                        new OA\Property(property: 'phone', type: 'string', example: '+1234567890'),
                     ],
                     type: 'object',
                     nullable: true
-                )
+                ),
             ]
         )
     )]
@@ -159,7 +159,7 @@ class UserDataController extends AbstractController
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: 'message', type: 'string', example: 'No user data found'),
-                new OA\Property(property: 'data', type: 'object', example: null)
+                new OA\Property(property: 'data', type: 'object', example: null),
             ]
         )
     )]

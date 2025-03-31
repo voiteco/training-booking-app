@@ -7,6 +7,8 @@ use App\Repository\BookingRepository;
 use App\Repository\TrainingRepository;
 use App\Service\DeviceTokenService;
 use Doctrine\ORM\EntityManagerInterface;
+use Nelmio\ApiDocBundle\Attribute\Model;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,8 +16,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-use OpenApi\Attributes as OA;
-use Nelmio\ApiDocBundle\Attribute\Model;
 
 #[OA\Tag(name: 'Bookings')]
 #[Route('/api/bookings')]
@@ -46,7 +46,7 @@ class BookingController extends AbstractController
                 new OA\Property(property: 'training_id', type: 'integer', example: 1),
                 new OA\Property(property: 'full_name', type: 'string', example: 'John Doe'),
                 new OA\Property(property: 'email', type: 'string', format: 'email', example: 'john@example.com'),
-                new OA\Property(property: 'phone', type: 'string', example: '+1234567890')
+                new OA\Property(property: 'phone', type: 'string', example: '+1234567890'),
             ]
         )
     )]
@@ -61,7 +61,7 @@ class BookingController extends AbstractController
         content: new OA\JsonContent(
             properties: [
                 new OA\Property(property: 'error', type: 'string', example: 'No available slots'),
-                new OA\Property(property: 'errors', type: 'object')
+                new OA\Property(property: 'errors', type: 'object'),
             ]
         )
     )]
@@ -70,7 +70,7 @@ class BookingController extends AbstractController
         description: 'Training not found',
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: 'error', type: 'string', example: 'Training not found')
+                new OA\Property(property: 'error', type: 'string', example: 'Training not found'),
             ]
         )
     )]
@@ -168,7 +168,7 @@ class BookingController extends AbstractController
         description: 'Booking cancelled successfully',
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true)
+                new OA\Property(property: 'success', type: 'boolean', example: true),
             ]
         )
     )]
@@ -177,7 +177,7 @@ class BookingController extends AbstractController
         description: 'Access denied - not your booking',
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: 'error', type: 'string', example: 'Access denied')
+                new OA\Property(property: 'error', type: 'string', example: 'Access denied'),
             ]
         )
     )]
@@ -186,7 +186,7 @@ class BookingController extends AbstractController
         description: 'Booking not found',
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: 'error', type: 'string', example: 'Booking not found')
+                new OA\Property(property: 'error', type: 'string', example: 'Booking not found'),
             ]
         )
     )]
@@ -248,10 +248,10 @@ class BookingController extends AbstractController
                             new OA\Property(property: 'id', type: 'integer', example: 1),
                             new OA\Property(property: 'title', type: 'string', example: 'Yoga Class'),
                             new OA\Property(property: 'dateFormatted', type: 'string', example: '01.01.2023'),
-                            new OA\Property(property: 'timeFormatted', type: 'string', example: '18:00')
+                            new OA\Property(property: 'timeFormatted', type: 'string', example: '18:00'),
                         ],
                         type: 'object'
-                    )
+                    ),
                 ]
             )
         )

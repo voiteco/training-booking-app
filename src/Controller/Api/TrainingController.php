@@ -6,14 +6,13 @@ use App\Entity\Training;
 use App\Repository\BookingRepository;
 use App\Repository\TrainingRepository;
 use App\Service\DeviceTokenService;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
-use OpenApi\Attributes as OA;
-use Nelmio\ApiDocBundle\Attribute\Model;
 
 #[OA\Tag(name: 'Trainings')]
 #[Route('/api/trainings')]
@@ -52,7 +51,7 @@ class TrainingController extends AbstractController
                     new OA\Property(property: 'totalSlots', type: 'integer', example: 20),
                     new OA\Property(property: 'bookedSlots', type: 'integer', example: 15),
                     new OA\Property(property: 'userBooked', type: 'boolean', example: true),
-                    new OA\Property(property: 'userBookingId', type: 'integer', example: 5, nullable: true)
+                    new OA\Property(property: 'userBookingId', type: 'integer', example: 5, nullable: true),
                 ]
             )
         )
@@ -112,7 +111,7 @@ class TrainingController extends AbstractController
                     new OA\Property(property: 'dateFormatted', type: 'string', example: '01.01.2023'),
                     new OA\Property(property: 'timeFormatted', type: 'string', example: '18:00'),
                     new OA\Property(property: 'totalSlots', type: 'integer', example: 20),
-                    new OA\Property(property: 'bookedSlots', type: 'integer', example: 15)
+                    new OA\Property(property: 'bookedSlots', type: 'integer', example: 15),
                 ]
             )
         )
@@ -157,7 +156,7 @@ class TrainingController extends AbstractController
                     new OA\Property(property: 'totalSlots', type: 'integer', example: 20),
                     new OA\Property(property: 'bookedSlots', type: 'integer', example: 15),
                     new OA\Property(property: 'userBooked', type: 'boolean', example: true),
-                    new OA\Property(property: 'userBookingId', type: 'integer', example: 5)
+                    new OA\Property(property: 'userBookingId', type: 'integer', example: 5),
                 ]
             )
         )
@@ -213,7 +212,7 @@ class TrainingController extends AbstractController
                 new OA\Property(property: 'totalSlots', type: 'integer', example: 20),
                 new OA\Property(property: 'bookedSlots', type: 'integer', example: 15),
                 new OA\Property(property: 'userBooked', type: 'boolean', example: true),
-                new OA\Property(property: 'userBookingId', type: 'integer', example: 5, nullable: true)
+                new OA\Property(property: 'userBookingId', type: 'integer', example: 5, nullable: true),
             ]
         )
     )]
@@ -222,7 +221,7 @@ class TrainingController extends AbstractController
         description: 'Training not found',
         content: new OA\JsonContent(
             properties: [
-                new OA\Property(property: 'error', type: 'string', example: 'Training not found')
+                new OA\Property(property: 'error', type: 'string', example: 'Training not found'),
             ]
         )
     )]
