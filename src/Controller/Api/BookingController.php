@@ -14,7 +14,10 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use OpenApi\Attributes as OA;
+use Nelmio\ApiDocBundle\Attribute\Model;
 
+#[OA\Tag(name: 'Bookings')]
 #[Route('/api/bookings')]
 class BookingController extends AbstractController
 {
@@ -31,6 +34,46 @@ class BookingController extends AbstractController
     /**
      * @throws \JsonException
      */
+    #[OA\Post(
+        path: '/api/bookings',
+        summary: 'Create a new booking for a training'
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['training_id', 'full_name', 'email', 'phone'],
+            properties: [
+                new OA\Property(property: 'training_id', type: 'integer', example: 1),
+                new OA\Property(property: 'full_name', type: 'string', example: 'John Doe'),
+                new OA\Property(property: 'email', type: 'string', format: 'email', example: 'john@example.com'),
+                new OA\Property(property: 'phone', type: 'string', example: '+1234567890')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 201,
+        description: 'Booking created successfully',
+        content: new OA\JsonContent(ref: new Model(type: Booking::class, groups: ['booking:read']))
+    )]
+    #[OA\Response(
+        response: 400,
+        description: 'Invalid input or no available slots',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'No available slots'),
+                new OA\Property(property: 'errors', type: 'object')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Training not found',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'Training not found')
+            ]
+        )
+    )]
     #[Route('', name: 'api_bookings_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
@@ -109,6 +152,44 @@ class BookingController extends AbstractController
         return $response;
     }
 
+    #[OA\Delete(
+        path: '/api/bookings/{id}',
+        summary: 'Cancel an existing booking'
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        description: 'Booking ID',
+        in: 'path',
+        required: true,
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Booking cancelled successfully',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true)
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Access denied - not your booking',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'Access denied')
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Booking not found',
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: 'error', type: 'string', example: 'Booking not found')
+            ]
+        )
+    )]
     #[Route('/{id}', name: 'api_bookings_cancel', methods: ['DELETE'])]
     public function cancel(int $id, Request $request): JsonResponse
     {
@@ -145,6 +226,36 @@ class BookingController extends AbstractController
     /**
      * @throws \JsonException
      */
+    #[OA\Get(
+        path: '/api/bookings/history',
+        summary: 'Get user\'s booking history'
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'List of user\'s bookings',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(
+                properties: [
+                    new OA\Property(property: 'id', type: 'integer', example: 1),
+                    new OA\Property(property: 'status', type: 'string', example: 'active'),
+                    new OA\Property(property: 'fullName', type: 'string', example: 'John Doe'),
+                    new OA\Property(property: 'email', type: 'string', example: 'john@example.com'),
+                    new OA\Property(property: 'phone', type: 'string', example: '+1234567890'),
+                    new OA\Property(
+                        property: 'training',
+                        properties: [
+                            new OA\Property(property: 'id', type: 'integer', example: 1),
+                            new OA\Property(property: 'title', type: 'string', example: 'Yoga Class'),
+                            new OA\Property(property: 'dateFormatted', type: 'string', example: '01.01.2023'),
+                            new OA\Property(property: 'timeFormatted', type: 'string', example: '18:00')
+                        ],
+                        type: 'object'
+                    )
+                ]
+            )
+        )
+    )]
     #[Route('/history', name: 'api_bookings_history', methods: ['GET'])]
     public function history(Request $request): JsonResponse
     {
