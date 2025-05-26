@@ -98,11 +98,20 @@ class GoogleSheetService
 
             // Предполагаем, что столбцы в таблице идут в порядке:
             // ID, Дата, Время, Название, Места, Цена
+            $formattedDate = $this->formatDate($row[1]);
+            $formattedTime = $this->formatTime($row[3]);
+            
+            // Skip rows with invalid dates or times
+            if ($formattedDate === null || $formattedTime === null) {
+                $this->logger->warning('Skipping row with invalid date or time format', ['row' => $row]);
+                continue;
+            }
+            
             $formattedData[] = [
                 'id' => $row[0],
-                'date' => $this->formatDate($row[1]),
+                'date' => $formattedDate,
                 'dayOfWeek' => $row[2],
-                'time' => $this->formatTime($row[3]),
+                'time' => $formattedTime,
                 'title' => $row[4],
                 'slots' => (int) $row[5],
                 'price' => (float) $row[6],
@@ -112,7 +121,13 @@ class GoogleSheetService
         return $formattedData;
     }
 
-    private function formatDate(string $dateString): string
+    /**
+     * Formats a date string to Y-m-d format
+     * 
+     * @param string $dateString The date string to format
+     * @return string|null Formatted date string or null if parsing fails
+     */
+    private function formatDate(string $dateString): ?string
     {
         // Преобразуем дату из формата, используемого в Google Sheet, в формат Y-m-d
         try {
@@ -133,11 +148,17 @@ class GoogleSheetService
                 'error' => $e->getMessage(),
             ]);
 
-            return $dateString; // Возвращаем исходную строку, если не удалось преобразовать
+            return null; // Return null instead of unvalidated input
         }
     }
 
-    private function formatTime(string $timeString): string
+    /**
+     * Formats a time string to H:i:s format
+     * 
+     * @param string $timeString The time string to format
+     * @return string|null Formatted time string or null if parsing fails
+     */
+    private function formatTime(string $timeString): ?string
     {
         // Преобразуем время из формата, используемого в Google Sheet, в формат H:i
         try {
@@ -158,7 +179,7 @@ class GoogleSheetService
                 'error' => $e->getMessage(),
             ]);
 
-            return $timeString.':00'; // Добавляем секунды, если не удалось преобразовать
+            return null; // Return null instead of unvalidated input
         }
     }
 
