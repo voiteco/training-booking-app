@@ -21,23 +21,23 @@ class BookingControllerTest extends WebTestCase
         $this->client = static::createClient();
         $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
-        // Очищаем тестовую базу данных и добавляем тестовые данные
+        // Clear test database and add test data
         $this->setupTestData();
     }
 
     private function setupTestData(): void
     {
-        // Очищаем существующие бронирования
+        // Clear existing bookings
         $this->entityManager->createQuery('DELETE FROM App\Entity\Booking')->execute();
-        // Очищаем существующие тренировки
+        // Clear existing trainings
         $this->entityManager->createQuery('DELETE FROM App\Entity\Training')->execute();
 
-        // Создаем тестовую тренировку
+        // Create a test training
         $training = new Training();
         $training->setGoogleSheetId('test-1');
         $training->setDate(new \DateTimeImmutable('2025-03-25'));
         $training->setTime(new \DateTimeImmutable('10:00'));
-        $training->setTitle('Тестовая тренировка');
+        $training->setTitle('Test Training');
         $training->setSlots(10);
         $training->setSlotsAvailable(10);
         $training->setPrice('1000');
@@ -62,6 +62,7 @@ class BookingControllerTest extends WebTestCase
             'full_name' => 'Иван Иванов',
             'email' => 'ivan@example.com',
             'phone' => '+79001234567',
+            'agreement' => true,
         ];
 
         $this->client->request(
@@ -84,7 +85,7 @@ class BookingControllerTest extends WebTestCase
         $this->assertEquals('Иван Иванов', $response['fullName']);
         $this->assertEquals('active', $response['status']);
 
-        // Проверяем, что количество доступных мест уменьшилось
+        // Check that the number of available slots decreased
         $training = $this->entityManager->getRepository(Training::class)->find($this->trainingId);
         $this->assertEquals(9, $training->getSlotsAvailable());
     }
@@ -183,17 +184,18 @@ class BookingControllerTest extends WebTestCase
      */
     public function testBookingWithoutAvailableSlots(): void
     {
-        // Заполняем все доступные места
+        // Fill all available slots
         $training = $this->entityManager->getRepository(Training::class)->find($this->trainingId);
         $training->setSlotsAvailable(0);
         $this->entityManager->flush();
 
-        // Пытаемся создать бронирование
+        // Try to create a booking
         $bookingData = [
             'training_id' => $this->trainingId,
             'full_name' => 'Иван Иванов',
             'email' => 'ivan@example.com',
             'phone' => '+79001234567',
+            'agreement' => true,
         ];
 
         $this->client->request(
@@ -205,7 +207,7 @@ class BookingControllerTest extends WebTestCase
             json_encode($bookingData, JSON_THROW_ON_ERROR)
         );
 
-        // Ожидаем ошибку, т.к. мест нет
+        // Expect an error because there are no slots available
         self::assertResponseStatusCodeSame(400);
 
         $response = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
