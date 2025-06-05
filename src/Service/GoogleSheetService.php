@@ -98,20 +98,11 @@ class GoogleSheetService
 
             // Предполагаем, что столбцы в таблице идут в порядке:
             // ID, Дата, Время, Название, Места, Цена
-            $formattedDate = $this->formatDate($row[1]);
-            $formattedTime = $this->formatTime($row[3]);
-            
-            // Skip rows with invalid dates or times
-            if ($formattedDate === null || $formattedTime === null) {
-                $this->logger->warning('Skipping row with invalid date or time format', ['row' => $row]);
-                continue;
-            }
-            
             $formattedData[] = [
                 'id' => $row[0],
-                'date' => $formattedDate,
+                'date' => $this->formatDate($row[1]),
                 'dayOfWeek' => $row[2],
-                'time' => $formattedTime,
+                'time' => $this->formatTime($row[3]),
                 'title' => $row[4],
                 'slots' => (int) $row[5],
                 'price' => (float) $row[6],
@@ -121,13 +112,7 @@ class GoogleSheetService
         return $formattedData;
     }
 
-    /**
-     * Formats a date string to Y-m-d format
-     * 
-     * @param string $dateString The date string to format
-     * @return string|null Formatted date string or null if parsing fails
-     */
-    private function formatDate(string $dateString): ?string
+    private function formatDate(string $dateString): string
     {
         // Преобразуем дату из формата, используемого в Google Sheet, в формат Y-m-d
         try {
@@ -148,17 +133,16 @@ class GoogleSheetService
                 'error' => $e->getMessage(),
             ]);
 
-            return null; // Return null instead of unvalidated input
+'error' => $e->getMessage(),
+            ]);
+
+            throw new \InvalidArgumentException("Invalid date format: $dateString", 0, $e);
+        }
+    }
         }
     }
 
-    /**
-     * Formats a time string to H:i:s format
-     * 
-     * @param string $timeString The time string to format
-     * @return string|null Formatted time string or null if parsing fails
-     */
-    private function formatTime(string $timeString): ?string
+    private function formatTime(string $timeString): string
     {
         // Преобразуем время из формата, используемого в Google Sheet, в формат H:i
         try {
@@ -179,13 +163,30 @@ class GoogleSheetService
                 'error' => $e->getMessage(),
             ]);
 
-            return null; // Return null instead of unvalidated input
+            return $timeString.':00'; // Добавляем секунды, если не удалось преобразовать
         }
     }
 
     private function updateTrainingsFromData(array $data): void
     {
-        $googleSheetIds = array_column($data, 'id');
+        // Validate data before processing
+        $validatedData = [];
+        $invalidRows = 0;
+        
+        foreach ($data as $index => $row) {
+            if ($this->validateTrainingData($row, $index)) {
+                $validatedData[] = $row;
+            } else {
+                $invalidRows++;
+            }
+        }
+        
+        if (empty($validatedData)) {
+            $this->logger->warning('No valid training data found to process');
+            return;
+        }
+        
+        $googleSheetIds = array_column($validatedData, 'id');
         $existingTrainings = $this->trainingRepository->findByGoogleSheetIds($googleSheetIds);
 
         // Создаем хеш-карту существующих тренировок для быстрого доступа
@@ -197,7 +198,7 @@ class GoogleSheetService
         $updatedTrainings = 0;
         $newTrainings = 0;
 
-        foreach ($data as $row) {
+        foreach ($validatedData as $row) {
             $googleSheetId = $row['id'];
             $training = $existingTrainingsMap[$googleSheetId] ?? null;
 
@@ -210,13 +211,20 @@ class GoogleSheetService
                 ++$updatedTrainings;
             }
 
-            $training->setDate(new \DateTime($row['date']));
-            $training->setTime(new \DateTime($row['time']));
-            $training->setTitle($row['title']);
-            $training->setSlots($row['slots']);
-            $training->setPrice($row['price']);
+            try {
+                $training->setDate(new \DateTime($row['date']));
+                $training->setTime(new \DateTime($row['time']));
+                $training->setTitle($row['title']);
+                $training->setSlots($row['slots']);
+                $training->setPrice($row['price']);
 
-            $this->entityManager->persist($training);
+                $this->entityManager->persist($training);
+            } catch (\Exception $e) {
+                $this->logger->error('Error processing training row', [
+                    'google_sheet_id' => $googleSheetId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $this->entityManager->flush();
@@ -224,7 +232,105 @@ class GoogleSheetService
         $this->logger->info('Trainings update completed', [
             'new_trainings' => $newTrainings,
             'updated_trainings' => $updatedTrainings,
+'new_trainings' => $newTrainings,
+            'updated_trainings' => $updatedTrainings,
+            'invalid_rows' => $invalidRows,
+            'invalid_row_details' => $this->invalidRowDetails, // Add this line
         ]);
+    }
+        ]);
+    }
+    
+    /**
+     * Validates a single row of training data from Google Sheets
+     * 
+     * @param array $row The row data to validate
+     * @param int $rowIndex The index of the row for logging purposes
+     * @return bool True if the data is valid, false otherwise
+     */
+    private function validateTrainingData(array $row, int $rowIndex): bool
+    {
+        $requiredFields = ['id', 'date', 'time', 'title', 'slots', 'price'];
+        
+        // Check if all required fields exist
+        foreach ($requiredFields as $field) {
+            if (!isset($row[$field]) || $row[$field] === '') {
+                $this->logger->warning('Missing required field in training data', [
+                    'row_index' => $rowIndex,
+                    'missing_field' => $field,
+                    'row_data' => $row,
+                ]);
+                return false;
+            }
+        }
+        
+        // Validate ID
+        if (!is_string($row['id']) || trim($row['id']) === '') {
+            $this->logger->warning('Invalid ID in training data', [
+                'row_index' => $rowIndex,
+                'id' => $row['id'],
+            ]);
+            return false;
+        }
+        
+        // Validate date
+        try {
+            $date = new \DateTime($row['date']);
+            if (!$date) {
+                throw new \Exception('Invalid date format');
+            }
+        } catch (\Exception $e) {
+            $this->logger->warning('Invalid date format in training data', [
+                'row_index' => $rowIndex,
+                'date' => $row['date'],
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+        
+        // Validate time
+        try {
+            $time = new \DateTime($row['time']);
+            if (!$time) {
+                throw new \Exception('Invalid time format');
+            }
+        } catch (\Exception $e) {
+            $this->logger->warning('Invalid time format in training data', [
+                'row_index' => $rowIndex,
+                'time' => $row['time'],
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+        
+        // Validate title
+        if (!is_string($row['title']) || trim($row['title']) === '') {
+            $this->logger->warning('Invalid title in training data', [
+                'row_index' => $rowIndex,
+                'title' => $row['title'],
+            ]);
+            return false;
+        }
+        
+        // Validate slots
+        if (!is_numeric($row['slots']) || (int)$row['slots'] <= 0) {
+            $this->logger->warning('Invalid slots in training data', [
+                'row_index' => $rowIndex,
+                'slots' => $row['slots'],
+            ]);
+            return false;
+        }
+        
+        // Validate price
+        if (!is_numeric($row['price']) || (float)$row['price'] < 0) {
+            $this->logger->warning('Invalid price in training data', [
+                'row_index' => $rowIndex,
+                'price' => $row['price'],
+            ]);
+            return false;
+        }
+        
+        return true;
     }
 
     private function getSheetsService(): Sheets
