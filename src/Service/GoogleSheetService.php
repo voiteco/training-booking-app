@@ -232,7 +232,12 @@ class GoogleSheetService
         $this->logger->info('Trainings update completed', [
             'new_trainings' => $newTrainings,
             'updated_trainings' => $updatedTrainings,
+'new_trainings' => $newTrainings,
+            'updated_trainings' => $updatedTrainings,
             'invalid_rows' => $invalidRows,
+            'invalid_row_details' => $this->invalidRowDetails, // Add this line
+        ]);
+    }
         ]);
     }
     
