@@ -32,6 +32,8 @@ class BookingController extends AbstractController
     }
 
     /**
+     * Creates a new booking for a training
+     * 
      * @throws \JsonException
      */
     #[OA\Post(
@@ -41,12 +43,13 @@ class BookingController extends AbstractController
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
-            required: ['training_id', 'full_name', 'email', 'phone'],
+            required: ['training_id', 'full_name', 'email', 'phone', 'agreement'],
             properties: [
                 new OA\Property(property: 'training_id', type: 'integer', example: 1),
                 new OA\Property(property: 'full_name', type: 'string', example: 'John Doe'),
                 new OA\Property(property: 'email', type: 'string', format: 'email', example: 'john@example.com'),
                 new OA\Property(property: 'phone', type: 'string', example: '+1234567890'),
+                new OA\Property(property: 'agreement', type: 'boolean', example: true),
             ]
         )
     )]
@@ -77,81 +80,107 @@ class BookingController extends AbstractController
     #[Route('', name: 'api_bookings_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-
-        // Validate the agreement separately since it's not part of the entity
-        // if (!isset($data['agreement']) || $data['agreement'] !== true) {
-        //    return $this->json(['errors' => ['agreement' => 'You must agree to the terms']], Response::HTTP_BAD_REQUEST);
-        // }
-
-        $training = $this->trainingRepository->find($data['training_id'] ?? 0);
-
-        if (!$training) {
-            return $this->json(['error' => 'Training not found'], Response::HTTP_NOT_FOUND);
-        }
-
-        if ($training->getSlotsAvailable() <= 0) {
-            return $this->json(['error' => 'No available slots'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $deviceToken = $this->deviceTokenService->getDeviceToken($request);
-        $session = $this->deviceTokenService->getUserSession($request);
-
-        // Check for existing booking
-        $existingBooking = $this->bookingRepository->findOneBy([
-            'training' => $training->getId(),
-            'deviceToken' => $deviceToken,
-            'status' => Booking::STATUS_ACTIVE,
-        ]);
-
-        if ($existingBooking) {
-            return $this->json(['error' => 'You already have a booking for this training'], Response::HTTP_BAD_REQUEST);
-        }
-
-        // Create booking
-        $booking = new Booking();
-        $booking->setTraining($training);
-        $booking->setFullName($data['full_name'] ?? '');
-        $booking->setEmail($data['email'] ?? '');
-        $booking->setPhone($data['phone'] ?? '');
-        $booking->setDeviceToken($deviceToken);
-
-        // Validate the entity
-        $violations = $this->validator->validate($booking);
-        if (count($violations) > 0) {
-            $errors = [];
-            foreach ($violations as $violation) {
-                $propertyPath = $violation->getPropertyPath();
-                $errors[$propertyPath] = $violation->getMessage();
+        try {
+            $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+            
+            // Validate required fields
+            $requiredFields = ['training_id', 'full_name', 'email', 'phone', 'agreement'];
+            $missingFields = [];
+            
+            foreach ($requiredFields as $field) {
+                if (!isset($data[$field]) || (empty($data[$field]) && $field !== 'agreement')) {
+                    $missingFields[] = $field;
+                }
+            }
+            
+            if (!empty($missingFields)) {
+                return $this->json([
+                    'error' => 'Missing required fields',
+                    'fields' => $missingFields
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            
+            // Validate the agreement separately since it's not part of the entity
+            if (!isset($data['agreement']) || $data['agreement'] !== true) {
+                return $this->json(['errors' => ['agreement' => 'You must agree to the terms']], Response::HTTP_BAD_REQUEST);
             }
 
-            return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
+            $training = $this->trainingRepository->find($data['training_id']);
+
+            if (!$training) {
+                return $this->json(['error' => 'Training not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            if ($training->getSlotsAvailable() <= 0) {
+                return $this->json(['error' => 'No available slots'], Response::HTTP_BAD_REQUEST);
+            }
+
+            $deviceToken = $this->deviceTokenService->getDeviceToken($request);
+            $session = $this->deviceTokenService->getUserSession($request);
+
+            // Check for existing booking
+            $existingBooking = $this->bookingRepository->findOneBy([
+                'training' => $training->getId(),
+                'deviceToken' => $deviceToken,
+                'status' => Booking::STATUS_ACTIVE,
+            ]);
+
+            if ($existingBooking) {
+                return $this->json(['error' => 'You already have a booking for this training'], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Create booking
+            $booking = new Booking();
+            $booking->setTraining($training);
+            $booking->setFullName($data['full_name']);
+            $booking->setEmail($data['email']);
+            $booking->setPhone($data['phone']);
+            $booking->setDeviceToken($deviceToken);
+
+            // Validate the entity
+            $violations = $this->validator->validate($booking);
+            if (count($violations) > 0) {
+                $errors = [];
+                foreach ($violations as $violation) {
+                    $propertyPath = $violation->getPropertyPath();
+                    $errors[$propertyPath] = $violation->getMessage();
+                }
+
+                return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Save user data for future form fills
+            $this->deviceTokenService->updateUserSessionData($session, [
+                'fullName' => $booking->getFullName(),
+                'email' => $booking->getEmail(),
+                'phone' => $booking->getPhone(),
+            ]);
+
+            // Update available slots
+            $training->setSlotsAvailable($training->getSlotsAvailable() - 1);
+
+            $this->entityManager->persist($booking);
+            $this->entityManager->persist($training);
+            $this->entityManager->flush();
+
+            $responseData = json_decode($this->serializer->serialize($booking, 'json', [
+                'groups' => ['booking:read'],
+            ]), true, 512, JSON_THROW_ON_ERROR);
+
+            $response = new JsonResponse($responseData, Response::HTTP_CREATED);
+            $this->deviceTokenService->addTokenCookie($response, $deviceToken);
+
+            return $response;
+        } catch (\JsonException $e) {
+            return $this->json(['error' => 'Invalid JSON format'], Response::HTTP_BAD_REQUEST);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'An unexpected error occurred'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        // Save user data for future form fills
-        $this->deviceTokenService->updateUserSessionData($session, [
-            'fullName' => $booking->getFullName(),
-            'email' => $booking->getEmail(),
-            'phone' => $booking->getPhone(),
-        ]);
-
-        // Update available slots
-        $training->setSlotsAvailable($training->getSlotsAvailable() - 1);
-
-        $this->entityManager->persist($booking);
-        $this->entityManager->persist($training);
-        $this->entityManager->flush();
-
-        $responseData = json_decode($this->serializer->serialize($booking, 'json', [
-            'groups' => ['booking:read'],
-        ]), true, 512, JSON_THROW_ON_ERROR);
-
-        $response = new JsonResponse($responseData, Response::HTTP_CREATED);
-        $this->deviceTokenService->addTokenCookie($response, $deviceToken);
-
-        return $response;
     }
 
+    /**
+     * Cancels an existing booking
+     */
     #[OA\Delete(
         path: '/api/bookings/{id}',
         summary: 'Cancel an existing booking'
@@ -193,37 +222,46 @@ class BookingController extends AbstractController
     #[Route('/{id}', name: 'api_bookings_cancel', methods: ['DELETE'])]
     public function cancel(int $id, Request $request): JsonResponse
     {
-        $booking = $this->bookingRepository->find($id);
+        try {
+            $booking = $this->bookingRepository->find($id);
 
-        if (!$booking) {
-            return $this->json(['error' => 'Booking not found'], Response::HTTP_NOT_FOUND);
+            if (!$booking) {
+                return $this->json(['error' => 'Booking not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            $deviceToken = $this->deviceTokenService->getDeviceToken($request);
+
+            // Check if the booking belongs to the current user
+            if ($booking->getDeviceToken() !== $deviceToken) {
+                return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
+            }
+
+            $training = $booking->getTraining();
+            if (!$training) {
+                return $this->json(['error' => 'Training not found for this booking'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
+            $booking->setStatus(Booking::STATUS_CANCELLED);
+
+            // Increase the number of available slots
+            $training->setSlotsAvailable($training->getSlotsAvailable() + 1);
+
+            $this->entityManager->persist($booking);
+            $this->entityManager->persist($training);
+            $this->entityManager->flush();
+
+            $response = new JsonResponse(['success' => true]);
+            $this->deviceTokenService->addTokenCookie($response, $deviceToken);
+
+            return $response;
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'An unexpected error occurred'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $deviceToken = $this->deviceTokenService->getDeviceToken($request);
-
-        // Проверяем, принадлежит ли бронирование текущему пользователю
-        if ($booking->getDeviceToken() !== $deviceToken) {
-            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
-        }
-
-        $training = $booking->getTraining();
-
-        $booking->setStatus(Booking::STATUS_CANCELLED);
-
-        // Увеличиваем количество доступных мест
-        $training->setSlotsAvailable($training->getSlotsAvailable() + 1);
-
-        $this->entityManager->persist($booking);
-        $this->entityManager->persist($training);
-        $this->entityManager->flush();
-
-        $response = new JsonResponse(['success' => true]);
-        $this->deviceTokenService->addTokenCookie($response, $deviceToken);
-
-        return $response;
     }
 
     /**
+     * Gets user's booking history
+     * 
      * @throws \JsonException
      */
     #[OA\Get(
@@ -259,30 +297,40 @@ class BookingController extends AbstractController
     #[Route('/history', name: 'api_bookings_history', methods: ['GET'])]
     public function history(Request $request): JsonResponse
     {
-        $deviceToken = $this->deviceTokenService->getDeviceToken($request);
-        $bookings = $this->bookingRepository->findHistoryByDeviceToken($deviceToken);
+        try {
+            $deviceToken = $this->deviceTokenService->getDeviceToken($request);
+            $bookings = $this->bookingRepository->findHistoryByDeviceToken($deviceToken);
 
-        $result = [];
-        foreach ($bookings as $booking) {
-            $bookingData = json_decode($this->serializer->serialize($booking, 'json', [
-                'groups' => ['booking:read'],
-            ]), true, 512, JSON_THROW_ON_ERROR);
+            $result = [];
+            foreach ($bookings as $booking) {
+                $bookingData = json_decode($this->serializer->serialize($booking, 'json', [
+                    'groups' => ['booking:read'],
+                ]), true, 512, JSON_THROW_ON_ERROR);
 
-            // Добавляем информацию о тренировке
-            $training = $booking->getTraining();
-            $bookingData['training'] = [
-                'id' => $training->getId(),
-                'title' => $training->getTitle(),
-                'dateFormatted' => $training->getDate()->format('d.m.Y'),
-                'timeFormatted' => $training->getTime()->format('H:i'),
-            ];
+                // Add training information
+                $training = $booking->getTraining();
+                if ($training) {
+                    $bookingData['training'] = [
+                        'id' => $training->getId(),
+                        'title' => $training->getTitle(),
+                        'dateFormatted' => $training->getDate() ? $training->getDate()->format('d.m.Y') : null,
+                        'timeFormatted' => $training->getTime() ? $training->getTime()->format('H:i') : null,
+                    ];
+                } else {
+                    $bookingData['training'] = null;
+                }
 
-            $result[] = $bookingData;
+                $result[] = $bookingData;
+            }
+
+            $response = new JsonResponse($result);
+            $this->deviceTokenService->addTokenCookie($response, $deviceToken);
+
+            return $response;
+        } catch (\JsonException $e) {
+            return $this->json(['error' => 'Error processing booking data'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'An unexpected error occurred'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $response = new JsonResponse($result);
-        $this->deviceTokenService->addTokenCookie($response, $deviceToken);
-
-        return $response;
     }
 }

@@ -26,6 +26,11 @@ class TrainingController extends AbstractController
     ) {
     }
 
+    /**
+     * Gets all upcoming trainings
+     * 
+     * @throws \JsonException
+     */
     #[OA\Get(
         path: '/api/trainings',
         summary: 'Get all upcoming trainings'
@@ -59,35 +64,56 @@ class TrainingController extends AbstractController
     #[Route('', name: 'api_trainings_list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
-        $trainings = $this->trainingRepository->findUpcoming();
+        try {
+            $trainings = $this->trainingRepository->findUpcoming();
 
-        $deviceToken = $this->deviceTokenService->getDeviceToken($request);
-        $userBookings = $this->bookingRepository->findActiveByDeviceToken($deviceToken);
+            $deviceToken = $this->deviceTokenService->getDeviceToken($request);
+            $userBookings = $this->bookingRepository->findActiveByDeviceToken($deviceToken);
 
-        // Map bookings by training ID for easy lookup
-        $bookingsByTrainingId = [];
-        foreach ($userBookings as $booking) {
-            $bookingsByTrainingId[$booking->getTraining()->getId()] = $booking;
-        }
-
-        $result = array_map(function ($training) use ($bookingsByTrainingId) {
-            $data = $this->serializeTraining($training);
-            $trainingId = $training->getId();
-
-            $data['userBooked'] = isset($bookingsByTrainingId[$trainingId]);
-            if ($data['userBooked']) {
-                $data['userBookingId'] = $bookingsByTrainingId[$trainingId]->getId();
+            // Map bookings by training ID for easy lookup
+            $bookingsByTrainingId = [];
+            foreach ($userBookings as $booking) {
+                $training = $booking->getTraining();
+                if ($training) {
+                    $bookingsByTrainingId[$training->getId()] = $booking;
+                }
             }
 
-            return $data;
-        }, $trainings);
+            $result = array_map(function ($training) use ($bookingsByTrainingId) {
+                try {
+                    $data = $this->serializeTraining($training);
+                    $trainingId = $training->getId();
 
-        $response = new JsonResponse($result);
-        $this->deviceTokenService->addTokenCookie($response, $deviceToken);
+                    $data['userBooked'] = isset($bookingsByTrainingId[$trainingId]);
+                    if ($data['userBooked']) {
+                        $data['userBookingId'] = $bookingsByTrainingId[$trainingId]->getId();
+                    }
 
-        return $response;
+                    return $data;
+                } catch (\Exception $e) {
+                    // Skip this training if there's an error
+                    return null;
+                }
+            }, $trainings);
+
+            // Filter out any null entries from errors
+            $result = array_filter($result);
+
+            $response = new JsonResponse($result);
+            $this->deviceTokenService->addTokenCookie($response, $deviceToken);
+
+            return $response;
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'An error occurred while fetching trainings'], 
+                \Symfony\Component\HttpFoundation\Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
+    /**
+     * Gets trainings with available slots
+     * 
+     * @throws \JsonException
+     */
     #[OA\Get(
         path: '/api/trainings/available',
         summary: 'Get trainings with available slots'
@@ -119,17 +145,35 @@ class TrainingController extends AbstractController
     #[Route('/available', name: 'api_trainings_available', methods: ['GET'])]
     public function available(Request $request): JsonResponse
     {
-        $trainings = $this->trainingRepository->findAvailable();
-        $deviceToken = $this->deviceTokenService->getDeviceToken($request);
+        try {
+            $trainings = $this->trainingRepository->findAvailable();
+            $deviceToken = $this->deviceTokenService->getDeviceToken($request);
 
-        $result = array_map([$this, 'serializeTraining'], $trainings);
+            $result = [];
+            foreach ($trainings as $training) {
+                try {
+                    $result[] = $this->serializeTraining($training);
+                } catch (\Exception $e) {
+                    // Skip this training if there's an error
+                    continue;
+                }
+            }
 
-        $response = new JsonResponse($result);
-        $this->deviceTokenService->addTokenCookie($response, $deviceToken);
+            $response = new JsonResponse($result);
+            $this->deviceTokenService->addTokenCookie($response, $deviceToken);
 
-        return $response;
+            return $response;
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'An error occurred while fetching available trainings'], 
+                \Symfony\Component\HttpFoundation\Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
+    /**
+     * Gets user's booked trainings
+     * 
+     * @throws \JsonException
+     */
     #[OA\Get(
         path: '/api/trainings/user',
         summary: 'Get user\'s booked trainings'
@@ -164,24 +208,44 @@ class TrainingController extends AbstractController
     #[Route('/user', name: 'api_trainings_user', methods: ['GET'])]
     public function userTrainings(Request $request): JsonResponse
     {
-        $deviceToken = $this->deviceTokenService->getDeviceToken($request);
-        $userBookings = $this->bookingRepository->findActiveByDeviceToken($deviceToken);
+        try {
+            $deviceToken = $this->deviceTokenService->getDeviceToken($request);
+            $userBookings = $this->bookingRepository->findActiveByDeviceToken($deviceToken);
 
-        $result = [];
-        foreach ($userBookings as $booking) {
-            $trainingData = $this->serializeTraining($booking->getTraining());
-            $trainingData['userBooked'] = true;
-            $trainingData['userBookingId'] = $booking->getId();
+            $result = [];
+            foreach ($userBookings as $booking) {
+                try {
+                    $training = $booking->getTraining();
+                    if (!$training) {
+                        continue;
+                    }
+                    
+                    $trainingData = $this->serializeTraining($training);
+                    $trainingData['userBooked'] = true;
+                    $trainingData['userBookingId'] = $booking->getId();
 
-            $result[] = $trainingData;
+                    $result[] = $trainingData;
+                } catch (\Exception $e) {
+                    // Skip this booking if there's an error
+                    continue;
+                }
+            }
+
+            $response = new JsonResponse($result);
+            $this->deviceTokenService->addTokenCookie($response, $deviceToken);
+
+            return $response;
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'An error occurred while fetching user trainings'], 
+                \Symfony\Component\HttpFoundation\Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $response = new JsonResponse($result);
-        $this->deviceTokenService->addTokenCookie($response, $deviceToken);
-
-        return $response;
     }
 
+    /**
+     * Gets specific training by ID
+     * 
+     * @throws \JsonException
+     */
     #[OA\Get(
         path: '/api/trainings/{id}',
         summary: 'Get specific training by ID'
@@ -228,45 +292,61 @@ class TrainingController extends AbstractController
     #[Route('/{id}', name: 'api_trainings_show', methods: ['GET'])]
     public function show(int $id, Request $request): JsonResponse
     {
-        $training = $this->trainingRepository->find($id);
+        try {
+            $training = $this->trainingRepository->find($id);
 
-        if (!$training) {
-            return $this->json(['error' => 'Training not found'], Response::HTTP_NOT_FOUND);
-        }
-
-        $deviceToken = $this->deviceTokenService->getDeviceToken($request);
-        $userBookings = $this->bookingRepository->findActiveByDeviceToken($deviceToken);
-
-        $trainingData = $this->serializeTraining($training);
-        $trainingData['userBooked'] = false;
-
-        foreach ($userBookings as $booking) {
-            if ($booking->getTraining()->getId() === $training->getId()) {
-                $trainingData['userBooked'] = true;
-                $trainingData['userBookingId'] = $booking->getId();
-                break;
+            if (!$training) {
+                return $this->json(['error' => 'Training not found'], Response::HTTP_NOT_FOUND);
             }
+
+            $deviceToken = $this->deviceTokenService->getDeviceToken($request);
+            $userBookings = $this->bookingRepository->findActiveByDeviceToken($deviceToken);
+
+            $trainingData = $this->serializeTraining($training);
+            $trainingData['userBooked'] = false;
+
+            foreach ($userBookings as $booking) {
+                $bookingTraining = $booking->getTraining();
+                if ($bookingTraining && $bookingTraining->getId() === $training->getId()) {
+                    $trainingData['userBooked'] = true;
+                    $trainingData['userBookingId'] = $booking->getId();
+                    break;
+                }
+            }
+
+            $response = new JsonResponse($trainingData);
+            $this->deviceTokenService->addTokenCookie($response, $deviceToken);
+
+            return $response;
+        } catch (\JsonException $e) {
+            return $this->json(['error' => 'Error processing training data'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'An unexpected error occurred'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $response = new JsonResponse($trainingData);
-        $this->deviceTokenService->addTokenCookie($response, $deviceToken);
-
-        return $response;
     }
 
     /**
+     * Serializes a training entity to an array with formatted date and time
+     * 
+     * @param Training $training The training entity to serialize
+     * @return array The serialized training data
      * @throws \JsonException
      */
     private function serializeTraining(Training $training): array
     {
-        $data = json_decode($this->serializer->serialize($training, 'json', [
-            'groups' => ['training:read'],
-        ]), true, 512, JSON_THROW_ON_ERROR);
+        try {
+            $data = json_decode($this->serializer->serialize($training, 'json', [
+                'groups' => ['training:read'],
+            ]), true, 512, JSON_THROW_ON_ERROR);
 
-        // Форматируем дату и время
-        $data['dateFormatted'] = $training->getDate()?->format('d.m.Y');
-        $data['timeFormatted'] = $training->getTime()?->format('H:i');
+            // Format date and time with null checks
+            $data['dateFormatted'] = $training->getDate() ? $training->getDate()->format('d.m.Y') : null;
+            $data['timeFormatted'] = $training->getTime() ? $training->getTime()->format('H:i') : null;
 
-        return $data;
+            return $data;
+        } catch (\JsonException $e) {
+            // Log the error
+            throw $e;
+        }
     }
 }

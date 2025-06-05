@@ -27,6 +27,8 @@ class UserDataController extends AbstractController
     }
 
     /**
+     * Saves user profile data
+     * 
      * @throws \JsonException
      */
     #[OA\Post(
@@ -78,51 +80,82 @@ class UserDataController extends AbstractController
     #[Route('', name: 'api_user_data_save', methods: ['POST'])]
     public function saveUserData(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        if (!isset($data['full_name'], $data['email'], $data['phone']) || !$data) {
-            return $this->json(['message' => 'Invalid data provided'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $deviceToken = $this->deviceTokenService->getDeviceToken($request);
-
-        // Ищем существующую сессию или создаем новую
-        $userSession = $this->userSessionRepository->findOneBy(['deviceToken' => $deviceToken]);
-
-        if ($userSession === null) {
-            $userSession = new UserSession();
-            $userSession->setDeviceToken($deviceToken);
-            $userSession->setCreatedAt(new \DateTimeImmutable());
-        }
-
-        // Обновляем данные пользователя
-        $userSession->setFullName($data['full_name']);
-        $userSession->setEmail($data['email']);
-        $userSession->setPhone($data['phone']);
-        $userSession->setLastVisit(new \DateTimeImmutable());
-        $userSession->setUpdatedAt(new \DateTimeImmutable());
-
-        // Валидация
-        $errors = $this->validator->validate($userSession);
-        if (count($errors) > 0) {
-            $errorMessages = [];
-            foreach ($errors as $error) {
-                $errorMessages[] = $error->getMessage();
+        try {
+            $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+            
+            // Validate required fields
+            $requiredFields = ['full_name', 'email', 'phone'];
+            $missingFields = [];
+            
+            foreach ($requiredFields as $field) {
+                if (!isset($data[$field]) || empty($data[$field])) {
+                    $missingFields[] = $field;
+                }
+            }
+            
+            if (!empty($missingFields)) {
+                return $this->json([
+                    'message' => 'Missing required fields',
+                    'errors' => $missingFields
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            
+            // Basic email validation
+            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                return $this->json([
+                    'message' => 'Invalid email format',
+                    'errors' => ['email' => 'Please provide a valid email address']
+                ], Response::HTTP_BAD_REQUEST);
             }
 
-            return $this->json(['message' => 'Validation failed', 'errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
+            $deviceToken = $this->deviceTokenService->getDeviceToken($request);
+
+            // Find existing session or create a new one
+            $userSession = $this->userSessionRepository->findOneBy(['deviceToken' => $deviceToken]);
+
+            if ($userSession === null) {
+                $userSession = new UserSession();
+                $userSession->setDeviceToken($deviceToken);
+                $userSession->setCreatedAt(new \DateTimeImmutable());
+            }
+
+            // Update user data
+            $userSession->setFullName($data['full_name']);
+            $userSession->setEmail($data['email']);
+            $userSession->setPhone($data['phone']);
+            $userSession->setLastVisit(new \DateTimeImmutable());
+            $userSession->setUpdatedAt(new \DateTimeImmutable());
+
+            // Validation
+            $errors = $this->validator->validate($userSession);
+            if (count($errors) > 0) {
+                $errorMessages = [];
+                foreach ($errors as $error) {
+                    $errorMessages[] = $error->getMessage();
+                }
+
+                return $this->json(['message' => 'Validation failed', 'errors' => $errorMessages], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Save data
+            $this->entityManager->persist($userSession);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'User data saved successfully',
+                'device_token' => $deviceToken,
+            ]);
+        } catch (\JsonException $e) {
+            return $this->json(['message' => 'Invalid JSON format'], Response::HTTP_BAD_REQUEST);
+        } catch (\Exception $e) {
+            return $this->json(['message' => 'An unexpected error occurred'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        // Сохраняем данные
-        $this->entityManager->persist($userSession);
-        $this->entityManager->flush();
-
-        return $this->json([
-            'success' => true,
-            'message' => 'User data saved successfully',
-            'device_token' => $deviceToken,
-        ]);
     }
 
+    /**
+     * Gets user profile data
+     */
     #[OA\Get(
         path: '/api/user-data',
         summary: 'Get user profile data'
@@ -166,23 +199,30 @@ class UserDataController extends AbstractController
     #[Route('', name: 'api_user_data_get', methods: ['GET'])]
     public function getUserData(Request $request): JsonResponse
     {
-        $deviceToken = $this->deviceTokenService->getDeviceToken($request);
-        $userSession = $this->userSessionRepository->findOneBy(['deviceToken' => $deviceToken]);
+        try {
+            $deviceToken = $this->deviceTokenService->getDeviceToken($request);
+            $userSession = $this->userSessionRepository->findOneBy(['deviceToken' => $deviceToken]);
 
-        if ($userSession === null) {
+            if ($userSession === null) {
+                return $this->json([
+                    'message' => 'No user data found',
+                    'data' => null,
+                ], Response::HTTP_NOT_FOUND);
+            }
+
             return $this->json([
-                'message' => 'No user data found',
+                'message' => 'User data retrieved successfully',
+                'data' => [
+                    'full_name' => $userSession->getFullName(),
+                    'email' => $userSession->getEmail(),
+                    'phone' => $userSession->getPhone(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'message' => 'An error occurred while retrieving user data',
                 'data' => null,
-            ], Response::HTTP_NOT_FOUND);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        return $this->json([
-            'message' => 'User data retrieved successfully',
-            'data' => [
-                'full_name' => $userSession->getFullName(),
-                'email' => $userSession->getEmail(),
-                'phone' => $userSession->getPhone(),
-            ],
-        ]);
     }
 }
