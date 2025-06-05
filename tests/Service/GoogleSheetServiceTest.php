@@ -139,9 +139,7 @@ class GoogleSheetServiceTest extends TestCase
      */
     public function testFormatDateWithValidFormats(): void
     {
-        $reflectionClass = new \ReflectionClass($this->googleSheetService);
-        $formatDateMethod = $reflectionClass->getMethod('formatDate');
-        $formatDateMethod->setAccessible(true);
+        $formatDateMethod = $this->getAccessibleReflectionMethod('formatDate');
 
         // Test d.m.y format
         $result = $formatDateMethod->invoke($this->googleSheetService, '25.03.23');
