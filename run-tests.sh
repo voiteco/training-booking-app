@@ -1,5 +1,4 @@
 #!/bin/bash
-#!/bin/bash
 set -e  # Exit immediately if a command exits with a non-zero status
 cd /workspace || { echo "Failed to change directory to /workspace"; exit 1; }
 php bin/phpunit tests/Controller/Api/BookingControllerTest.php
