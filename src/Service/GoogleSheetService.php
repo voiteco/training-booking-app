@@ -133,7 +133,12 @@ class GoogleSheetService
                 'error' => $e->getMessage(),
             ]);
 
-            return $dateString; // Возвращаем исходную строку, если не удалось преобразовать
+'error' => $e->getMessage(),
+            ]);
+
+            throw new \InvalidArgumentException("Invalid date format: $dateString", 0, $e);
+        }
+    }
         }
     }
 
