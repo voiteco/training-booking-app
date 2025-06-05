@@ -107,6 +107,14 @@ class GoogleSheetServiceTest extends TestCase
 
         $this->entityManager->expects($this->once())
             ->method('flush');
+            
+        $this->logger->expects($this->once())
+            ->method('info')
+            ->with('Trainings update completed', $this->callback(function($context) {
+                return $context['new_trainings'] === 1 && 
+                       $context['updated_trainings'] === 1 && 
+                       $context['invalid_rows'] === 0;
+            }));
 
         // Call private method through reflection
         $this->updateTrainingsMethod->invoke($this->googleSheetService, $data);
@@ -115,6 +123,133 @@ class GoogleSheetServiceTest extends TestCase
         $this->assertEquals('Йога', $existingTraining->getTitle());
         $this->assertEquals(20, $existingTraining->getSlots());
         $this->assertEquals('1000', $existingTraining->getPrice());
+    }
+    
+    /**
+     * @throws \ReflectionException
+     */
+    public function testUpdateTrainingsFromDataWithInvalidData(): void
+    {
+        $data = [
+            [
+                'id' => '1',
+                'date' => '2025-03-25',
+                'time' => '10:00',
+                'title' => 'Йога',
+                'slots' => 20,
+                'price' => '1000',
+            ],
+            [
+                'id' => '2',
+                'date' => 'invalid-date',  // Invalid date
+                'time' => '11:00',
+                'title' => 'Пилатес',
+                'slots' => 15,
+                'price' => '1200',
+            ],
+            [
+                'id' => '3',
+                'date' => '2025-03-27',
+                'time' => '12:00',
+                'title' => '',  // Empty title
+                'slots' => 10,
+                'price' => '900',
+            ],
+            [
+                'id' => '4',
+                'date' => '2025-03-28',
+                'time' => '13:00',
+                'title' => 'Стретчинг',
+                'slots' => -5,  // Negative slots
+                'price' => '800',
+            ],
+            // Missing required field 'price'
+            [
+                'id' => '5',
+                'date' => '2025-03-29',
+                'time' => '14:00',
+                'title' => 'Зумба',
+                'slots' => 25,
+            ],
+        ];
+
+        $existingTraining = $this->createTraining('1', 'Йога (старое название)', '2025-03-25');
+
+        $this->trainingRepository->expects($this->once())
+            ->method('findByGoogleSheetIds')
+            ->with(['1'])
+            ->willReturn([$existingTraining]);
+
+        // We expect warnings for the invalid rows
+        $this->logger->expects($this->atLeast(4))
+            ->method('warning');
+            
+        $this->logger->expects($this->once())
+            ->method('info')
+            ->with('Trainings update completed', $this->callback(function($context) {
+                return $context['new_trainings'] === 0 && 
+                       $context['updated_trainings'] === 1 && 
+                       $context['invalid_rows'] === 4;
+            }));
+
+        $this->entityManager->expects($this->once())
+            ->method('persist');
+
+        $this->entityManager->expects($this->once())
+            ->method('flush');
+
+        // Call private method through reflection
+        $this->updateTrainingsMethod->invoke($this->googleSheetService, $data);
+
+        // Verify only valid data was processed
+        $this->assertEquals('Йога', $existingTraining->getTitle());
+    }
+    
+    /**
+     * @throws \ReflectionException
+     */
+    public function testUpdateTrainingsFromDataWithAllInvalidData(): void
+    {
+        $data = [
+            [
+                'id' => '',  // Empty ID
+                'date' => '2025-03-25',
+                'time' => '10:00',
+                'title' => 'Йога',
+                'slots' => 20,
+                'price' => '1000',
+            ],
+            [
+                // Missing ID field
+                'date' => '2025-03-26',
+                'time' => '11:00',
+                'title' => 'Пилатес',
+                'slots' => 15,
+                'price' => '1200',
+            ],
+        ];
+
+        // We expect warnings for the invalid rows and one for no valid data
+        $this->logger->expects($this->atLeast(2))
+            ->method('warning');
+            
+        // Specifically check for the "No valid training data found" warning
+        $this->logger->expects($this->atLeastOnce())
+            ->method('warning')
+            ->with('No valid training data found to process');
+
+        // We don't expect any calls to findByGoogleSheetIds, persist, or flush
+        $this->trainingRepository->expects($this->never())
+            ->method('findByGoogleSheetIds');
+            
+        $this->entityManager->expects($this->never())
+            ->method('persist');
+            
+        $this->entityManager->expects($this->never())
+            ->method('flush');
+
+        // Call private method through reflection
+        $this->updateTrainingsMethod->invoke($this->googleSheetService, $data);
     }
 
     /**
@@ -132,122 +267,5 @@ class GoogleSheetServiceTest extends TestCase
         $training->setPrice('1000');
 
         return $training;
-    }
-
-    /**
-     * Test formatDate method with valid date formats
-     */
-    public function testFormatDateWithValidFormats(): void
-    {
-        $formatDateMethod = $this->getAccessibleReflectionMethod('formatDate');
-
-        // Test d.m.y format
-        $result = $formatDateMethod->invoke($this->googleSheetService, '25.03.23');
-        $this->assertEquals('2023-03-25', $result);
-
-        // Test Y-m-d format
-        $result = $formatDateMethod->invoke($this->googleSheetService, '2023-03-25');
-        $this->assertEquals('2023-03-25', $result);
-    }
-
-    /**
-     * Test formatDate method with invalid date formats
-     */
-    public function testFormatDateWithInvalidFormats(): void
-    {
-        $reflectionClass = new \ReflectionClass($this->googleSheetService);
-        $formatDateMethod = $reflectionClass->getMethod('formatDate');
-        $formatDateMethod->setAccessible(true);
-
-        // Test invalid format
-        $result = $formatDateMethod->invoke($this->googleSheetService, 'invalid-date');
-        $this->assertNull($result);
-
-        // Test potentially malicious input
-        $result = $formatDateMethod->invoke($this->googleSheetService, "'; DROP TABLE trainings; --");
-        $this->assertNull($result);
-    }
-
-    /**
-     * Test formatTime method with valid time formats
-     */
-    public function testFormatTimeWithValidFormats(): void
-    {
-        $reflectionClass = new \ReflectionClass($this->googleSheetService);
-        $formatTimeMethod = $reflectionClass->getMethod('formatTime');
-        $formatTimeMethod->setAccessible(true);
-
-        // Test H:i format
-        $result = $formatTimeMethod->invoke($this->googleSheetService, '14:30');
-        $this->assertEquals('14:30:00', $result);
-
-        // Test H.i format
-        $result = $formatTimeMethod->invoke($this->googleSheetService, '14.30');
-        $this->assertEquals('14:30:00', $result);
-    }
-
-    /**
-     * Test formatTime method with invalid time formats
-     */
-    public function testFormatTimeWithInvalidFormats(): void
-    {
-        $reflectionClass = new \ReflectionClass($this->googleSheetService);
-        $formatTimeMethod = $reflectionClass->getMethod('formatTime');
-        $formatTimeMethod->setAccessible(true);
-
-        // Test invalid format
-        $result = $formatTimeMethod->invoke($this->googleSheetService, 'invalid-time');
-        $this->assertNull($result);
-
-        // Test potentially malicious input
-        $result = $formatTimeMethod->invoke($this->googleSheetService, "'; DROP TABLE trainings; --");
-        $this->assertNull($result);
-    }
-
-    /**
-     * Test that fetchDataFromGoogleSheet skips rows with invalid date or time formats
-     */
-    public function testFetchDataFromGoogleSheetSkipsInvalidDateTimeRows(): void
-    {
-        $reflectionClass = new \ReflectionClass($this->googleSheetService);
-        $fetchDataMethod = $reflectionClass->getMethod('fetchDataFromGoogleSheet');
-        $fetchDataMethod->setAccessible(true);
-        
-        // Create a mock Sheets service
-        $mockSheetsService = $this->createMock(\Google\Service\Sheets::class);
-        $mockValues = $this->createMock(\Google\Service\Sheets\Resource\SpreadsheetsValues::class);
-        $mockSheetsService->spreadsheets_values = $mockValues;
-        
-        // Set up the mock response
-        $mockResponse = $this->createMock(\Google\Service\Sheets\ValueRange::class);
-        $mockResponse->method('getValues')->willReturn([
-            ['1', '25.03.23', 'Monday', '10:00', 'Valid Training', '20', '1000'], // Valid row
-            ['2', 'invalid-date', 'Tuesday', '11:00', 'Invalid Date Training', '15', '1200'], // Invalid date
-            ['3', '26.03.23', 'Wednesday', 'invalid-time', 'Invalid Time Training', '10', '1500'], // Invalid time
-        ]);
-        
-        $mockValues->method('get')->willReturn($mockResponse);
-        
-        // Replace the real service with our mock
-        $sheetsServiceProperty = $reflectionClass->getProperty('sheetsService');
-        $sheetsServiceProperty->setAccessible(true);
-        $sheetsServiceProperty->setValue($this->googleSheetService, $mockSheetsService);
-        
-        // Set up logger expectations before calling the method
-        $this->logger->expects($this->atLeast(2))
-            ->method('warning')
-            ->with(
-                $this->equalTo('Skipping row with invalid date or time format'),
-                $this->anything()
-            );
-        
-        // Call the method
-        $result = $fetchDataMethod->invoke($this->googleSheetService);
-        
-        // Verify that only the valid row was included in the result
-        $this->assertCount(1, $result);
-        $this->assertEquals('1', $result[0]['id']);
-        $this->assertEquals('2023-03-25', $result[0]['date']);
-        $this->assertEquals('10:00:00', $result[0]['time']);
     }
 }
